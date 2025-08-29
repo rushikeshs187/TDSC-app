@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bosch Changsha: A Digital Supply Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background-color: #0a192f;
+            color: #ccd6f6;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s;
+            opacity: 0;
+            transform: translateY(50px);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding-bottom: 80px;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .slide-content {
+            max-width: 1200px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .dynamic-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: linear-gradient(-45deg, #0a192f, #172a45, #0a192f);
+            background-size: 400% 400%;
+            animation: gradient-bg 15s ease infinite;
+        }
+        @keyframes gradient-bg {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1, h2, h3 { font-weight: 900; }
+        h1 { color: #e6f1ff; }
+        h2 {
+            font-size: 2.5rem;
+            color: #ccd6f6;
+            text-shadow: 0 0 15px rgba(100, 255, 218, 0.3);
+        }
+        h3 { color: #ccd6f6; }
+
+        .progress-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background-color: #0a192f;
+            border-top: 2px solid #172a45;
+        }
+        .road {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background-color: #172a45;
+        }
+        .road-lines {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: repeating-linear-gradient(90deg, #303c55, #303c55 30px, transparent 30px, transparent 60px);
+            animation: move-lines 2s linear infinite;
+        }
+        @keyframes move-lines {
+            from { background-position-x: 0; }
+            to { background-position-x: -60px; }
+        }
+        #progress-truck {
+            position: absolute;
+            bottom: 30px;
+            font-size: 40px;
+            color: #64ffda;
+            text-shadow: 0 0 15px #64ffda;
+            transition: left 0.5s ease-in-out;
+            transform: translateX(-50%);
+        }
+        .progress-stop {
+            position: absolute;
+            bottom: 60px;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8892b0;
+        }
+        .progress-stop i { font-size: 20px; margin-bottom: 2px; }
+
+        .interactive-card {
+            background-color: rgba(17, 34, 64, 0.7);
+            border: 1px solid #172a45;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+        }
+        .interactive-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 0 25px rgba(100, 255, 218, 0.2);
+            border-color: #64ffda;
+        }
+        
+        .glass-panel {
+            background-color: rgba(17, 34, 64, 0.5);
+            border: 1px solid #172a45;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-dot {
+            height: 1rem;
+            width: 1rem;
+            border-radius: 9999px;
+            display: inline-block;
+            margin-right: 0.5rem;
+            box-shadow: 0 0 8px;
+        }
+        .supply-chain-map {
+            position: relative;
+            height: 200px;
+            background-color: #0a192f;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #172a45;
+        }
+        .map-node {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            text-align: center;
+        }
+        .map-path {
+            position: absolute;
+            top: 50%;
+            left: 15%;
+            width: 70%;
+            height: 4px;
+            background-color: #303c55;
+            transform: translateY(-50%);
+        }
+        .map-truck {
+            position: absolute;
+            top: 50%;
+            font-size: 2rem;
+            color: #64ffda;
+            transform: translate(-50%, -50%);
+            transition: left 1s linear, color 0.3s;
+            text-shadow: 0 0 10px #64ffda;
+        }
+        .map-truck.delayed { animation: truck-shake 0.5s infinite; }
+        @keyframes truck-shake {
+            0% { transform: translate(-51%, -50%); }
+            50% { transform: translate(-49%, -50%); }
+            100% { transform: translate(-51%, -50%); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dynamic-bg"></div>
+
+    <div class="relative w-full h-screen">
+
+        <div id="slide-1" class="slide active">
+            <div class="slide-content text-center">
+                <i class="fas fa-warehouse text-7xl text-cyan-300 mb-4" style="text-shadow: 0 0 20px #64ffda;"></i>
+                <h1 class="text-5xl md:text-6xl mb-2">Bosch Changsha: The Digital Dispatch</h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-6">An Interactive Analysis of a World-Class Digital Transformation</p>
+                <p class="mb-8 max-w-3xl mx-auto text-gray-400">This presentation deconstructs the Bosch Changsha case study, framing its digital transformation as a modern supply chain. Our journey begins now.</p>
+                <button onclick="nextSlide()" class="bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-full text-lg hover:bg-cyan-300 transition-all transform hover:scale-105 shadow-lg shadow-cyan-400/30">
+                    Start Production <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="slide-2" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-box-open text-cyan-300 mr-3"></i>Stage 1: Raw Materials</h2>
+                <p class="text-lg text-gray-400 mb-12">The core organisational values that served as the foundation for transformation.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-1')">
+                        <i class="fas fa-clipboard-check text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Accountability and Delivery Orientation</h3>
+                        <p class="text-sm text-gray-400 mt-2">Moving from events to certifications to deliver real business outcomes.</p>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-2')">
+                        <i class="fas fa-fist-raised text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Empowerment</h3>
+                        <p class="text-sm text-gray-400 mt-2">Fueling change with the creativity of internal talent.</p>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-3')">
+                        <i class="fas fa-sitemap text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Top-Down Support</h3>
+                        <p class="text-sm text-gray-400 mt-2">Granting full authority and trust to transformation leaders.</p>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-4')">
+                        <i class="fas fa-handshake text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Collaboration</h3>
+                        <p class="text-sm text-gray-400 mt-2">Breaking down silos between business and technology.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="slide-3" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-robot text-cyan-300 mr-3"></i>Key Players in the Digital Transformation</h2>
+                <p class="text-lg text-gray-400 mb-12">The key players who assembled the transformation, each with a critical role.</p>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                     <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-5')">
+                        <i class="fas fa-user-tie text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Edith (Dept. Manager, BDO)</h3>
+                        <p class="text-sm text-cyan-200 font-semibold mt-2">The Visionary Architect</p>
+                    </div>
+                     <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-6')">
+                        <i class="fas fa-users-cog text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">The BDO Team</h3>
+                        <p class="text-sm text-cyan-200 font-semibold mt-2">The Operational Engine</p>
+                    </div>
+                     <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-7')">
+                        <i class="fas fa-bullhorn text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Solution Advocates</h3>
+                        <p class="text-sm text-cyan-200 font-semibold mt-2">The Critical Change Agents</p>
+                    </div>
+                     <div class="interactive-card p-6 rounded-lg text-center cursor-pointer" onclick="showModal('modal-8')">
+                        <i class="fas fa-tasks text-6xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-xl">Frontline Employees</h3>
+                        <p class="text-sm text-cyan-200 font-semibold mt-2">Foundation of the Shift</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="slide-4" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-users-viewfinder text-cyan-300 mr-3"></i>Delegation</h2>
+                <p class="text-lg text-gray-400 mb-12">Assigning responsibilities for the creation of this presentation.</p>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div class="interactive-card p-4 rounded-lg text-center">
+                        <h3 class="font-bold text-lg text-cyan-300">Anirudh Agarwal</h3>
+                        <p class="text-sm font-semibold text-gray-300 mt-1">Organisational Psychologist</p>
+                        <p class="text-xs text-gray-400 mt-2">Identifies the core organisational values that underpinned the transformation.</p>
+                    </div>
+                    <div class="interactive-card p-4 rounded-lg text-center">
+                        <h3 class="font-bold text-lg text-cyan-300">Suraj Easwar</h3>
+                        <p class="text-sm font-semibold text-gray-300 mt-1">Strategic Analyst</p>
+                        <p class="text-xs text-gray-400 mt-2">Outlines the key players and their strategic importance based on critical success factors.</p>
+                    </div>
+                    <div class="interactive-card p-4 rounded-lg text-center">
+                        <h3 class="font-bold text-lg text-cyan-300">Rushikesh Shinde</h3>
+                        <p class="text-sm font-semibold text-gray-300 mt-1">Communications Director</p>
+                        <p class="text-xs text-gray-400 mt-2">Presents a change story for a plant manager to deliver to frontline staff.</p>
+                    </div>
+                    <div class="interactive-card p-4 rounded-lg text-center">
+                        <h3 class="font-bold text-lg text-cyan-300">Harsha Vardhan</h3>
+                        <p class="text-sm font-semibold text-gray-300 mt-1">Change Management Consultant</p>
+                        <p class="text-xs text-gray-400 mt-2">Anticipates sources of resistance and pairs them with proven mitigation tactics.</p>
+                    </div>
+                    <div class="interactive-card p-4 rounded-lg text-center">
+                        <h3 class="font-bold text-lg text-cyan-300">Abhay Singh</h3>
+                        <p class="text-sm font-semibold text-gray-300 mt-1">Digital Innovation Strategist</p>
+                        <p class="text-xs text-gray-400 mt-2">Proposes and combine high-value use cases, details the required data, and defines their success metrics.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="slide-5" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-clipboard-check text-cyan-300 mr-3"></i>Stage 3: Quality Control & Comms</h2>
+                <p class="text-lg text-gray-400 mb-8">The manager's change story, ensuring alignment and buy-in across the factory floor.</p>
+                <div class="w-full max-w-5xl mx-auto glass-panel rounded-lg p-8 text-left">
+                    <div class="flex items-center justify-between gap-8">
+                        <div class="text-center">
+                            <i class="fas fa-question-circle text-6xl text-cyan-300 mb-4"></i>
+                            <h3 class="text-2xl font-bold text-gray-200">Why Now?</h3>
+                            <p class="text-gray-400 mt-2">To secure our future as an industry leader and stay ahead of the curve.</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-4xl text-gray-600"></i>
+                        <div class="text-center">
+                            <i class="fas fa-cogs text-6xl text-cyan-300 mb-4"></i>
+                            <h3 class="text-2xl font-bold text-gray-200">What Changes?</h3>
+                            <p class="text-gray-400 mt-2">Empowering you with new digital tools and skills, not replacing you.</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-4xl text-gray-600"></i>
+                        <div class="text-center">
+                            <i class="fas fa-gift text-6xl text-cyan-300 mb-4"></i>
+                            <h3 class="text-2xl font-bold text-gray-200">What's In It For You?</h3>
+                            <p class="text-gray-400 mt-2">A direct investment in your career with training and new opportunities.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="slide-6" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-route text-cyan-300 mr-3"></i>Stage 4: Logistics & Roadblocks</h2>
+                <p class="text-lg text-gray-400 mb-12">Navigating resistance with strategic mitigation tactics.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <div class="interactive-card p-6 rounded-lg cursor-pointer flex items-center gap-6" onclick="showModal('modal-9')">
+                        <i class="fas fa-user-slash text-5xl text-red-400"></i>
+                        <div>
+                            <h3 class="text-xl font-bold text-left">Fear of Job Loss</h3>
+                            <p class="text-sm text-gray-400 text-left mt-1">Mitigated by focusing on upskilling the existing workforce.</p>
+                        </div>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg cursor-pointer flex items-center gap-6" onclick="showModal('modal-10')">
+                        <i class="fas fa-battery-empty text-5xl text-red-400"></i>
+                        <div>
+                            <h3 class="text-xl font-bold text-left">Workload & Overload</h3>
+                            <p class="text-sm text-gray-400 text-left mt-1">Mitigated by making the process fun and engaging.</p>
+                        </div>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg cursor-pointer flex items-center gap-6" onclick="showModal('modal-11')">
+                        <i class="fas fa-question-circle text-5xl text-red-400"></i>
+                        <div>
+                            <h3 class="text-xl font-bold text-left">Skill Gaps & Confusion</h3>
+                            <p class="text-sm text-gray-400 text-left mt-1">Mitigated with structured training and clear development paths.</p>
+                        </div>
+                    </div>
+                    <div class="interactive-card p-6 rounded-lg cursor-pointer flex items-center gap-6" onclick="showModal('modal-12')">
+                        <i class="fas fa-code-branch text-5xl text-red-400 rotate-90"></i>
+                        <div>
+                            <h3 class="text-xl font-bold text-left">Departmental Silos</h3>
+                            <p class="text-sm text-gray-400 text-left mt-1">Mitigated by creating cross-functional roles and teams.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="slide-7" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-2"><i class="fas fa-truck-loading text-cyan-300 mr-3"></i>Stage 5: Future Deliveries</h2>
+                <p class="text-lg text-gray-400 mb-12">Prototyping high-value use cases to deliver continued success.</p>
+                <div class="flex flex-col md:flex-row justify-center items-stretch gap-8">
+                    <div class="interactive-card p-8 rounded-lg w-full md:w-1/2 text-left flex flex-col">
+                        <i class="fas fa-tools text-5xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-2xl mb-2">Predictive Maintenance</h3>
+                        <p class="text-gray-400 flex-grow">From reactive repairs to proactive optimization, this technology anticipates failures to save millions in potential downtime.</p>
+                    </div>
+                    <div class="interactive-card p-8 rounded-lg w-full md:w-1/2 text-left flex flex-col">
+                        <i class="fas fa-project-diagram text-5xl text-cyan-300 mb-4"></i>
+                        <h3 class="font-bold text-2xl mb-2">Supply Chain Digital Twin</h3>
+                        <p class="text-gray-400 flex-grow">A virtual, real-time replica of the supply chain that allows for simulating disruptions and optimizing logistics before they impact delivery.</p>
+                    </div>
+                </div>
+                 <button onclick="nextSlide()" class="mt-10 bg-cyan-400 text-gray-900 font-bold py-3 px-6 rounded-full text-lg hover:bg-cyan-300 transition-all transform hover:scale-105 shadow-lg shadow-cyan-400/30">
+                    Launch Prototypes <i class="fas fa-cogs ml-2"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="slide-8" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-4"><i class="fas fa-tachometer-alt text-cyan-300 mr-3"></i>Prototype: Predictive Maintenance</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 glass-panel p-6 rounded-lg text-left">
+                    <div class="lg:col-span-2">
+                        <h3 class="text-xl font-bold mb-3 border-b border-gray-600 pb-2">Live Factory Floor Status</h3>
+                        <div id="machine-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-3 border-b border-gray-600 pb-2">Overall Equipment Effectiveness</h3>
+                        <canvas id="oeeChart"></canvas>
+                        <h3 class="text-xl font-bold mb-3 border-b border-gray-600 pb-2 mt-4">Event Log</h3>
+                        <div id="maintenance-log" class="text-sm h-40 overflow-y-auto bg-gray-900/50 p-2 rounded-md font-mono text-xs"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="slide-9" class="slide">
+            <div class="slide-content">
+                <h2 class="mb-4"><i class="fas fa-globe-americas text-cyan-300 mr-3"></i>Prototype: Supply Chain Digital Twin</h2>
+                <div class="glass-panel p-6 rounded-lg text-left">
+                    <h3 class="text-xl font-bold mb-3 border-b border-gray-600 pb-2">Live Shipment Tracking</h3>
+                    <div class="supply-chain-map">
+                        <div class="map-path"></div>
+                        <div class="map-node" style="left: 5%;">
+                            <i class="fas fa-industry text-3xl"></i><p class="text-xs">Supplier</p>
+                        </div>
+                        <div class="map-node" style="left: 45%;">
+                            <i class="fas fa-warehouse text-4xl text-cyan-300"></i><p class="text-xs">Bosch Factory</p>
+                        </div>
+                        <div class="map-node" style="left: 85%;">
+                            <i class="fas fa-user-tie text-3xl"></i><p class="text-xs">Customer</p>
+                        </div>
+                        <div id="shipment-truck" class="map-truck"><i class="fas fa-truck"></i></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                        <div>
+                            <h4 class="font-semibold mb-2">Simulate Disruption:</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="simulateDisruption('delay')" class="bg-yellow-500 text-white text-sm font-bold py-1 px-3 rounded-md hover:bg-yellow-600 transition-colors">Supplier Delay</button>
+                                <button onclick="simulateDisruption('port')" class="bg-red-500 text-white text-sm font-bold py-1 px-3 rounded-md hover:bg-red-600 transition-colors">Port Congestion</button>
+                                <button onclick="simulateDisruption('weather')" class="bg-blue-500 text-white text-sm font-bold py-1 px-3 rounded-md hover:bg-blue-600 transition-colors">Weather</button>
+                                <button onclick="simulateDisruption('reset')" class="bg-gray-500 text-white text-sm font-bold py-1 px-3 rounded-md hover:bg-gray-600 transition-colors">Reset</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2">Shipment Status:</h4>
+                            <div id="twin-log" class="text-sm h-24 overflow-y-auto bg-gray-900/50 p-2 rounded-md font-mono text-xs"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2">Suggested Action:</h4>
+                            <div id="solution-panel" class="text-sm h-24 bg-gray-900/50 p-2 rounded-md"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="slide-10" class="slide">
+            <div class="slide-content text-center">
+                <i class="fas fa-flag-checkered text-7xl text-cyan-300 mb-4" style="text-shadow: 0 0 20px #64ffda;"></i>
+                <h1 class="text-5xl md:text-6xl mb-2">Final Destination</h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-8">Key Takeaways from the Transformation Journey</p>
+                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                    <div class="glass-panel p-6 rounded-lg">
+                        <i class="fas fa-heart text-3xl text-cyan-300 mb-3"></i>
+                        <h3 class="font-bold text-lg">Culture is the Engine</h3>
+                        <p class="text-sm text-gray-400 mt-1">Technology is a tool, but a culture of engagement and empowerment is what drives successful transformation.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-lg">
+                        <i class="fas fa-lightbulb text-3xl text-cyan-300 mb-3"></i>
+                        <h3 class="font-bold text-lg">Empowerment Breeds Innovation</h3>
+                        <p class="text-sm text-gray-400 mt-1">By upskilling internal talent, Bosch unlocked a powerful source of creativity and practical, ground-up solutions.</p>
+                    </div>
+                     <div class="glass-panel p-6 rounded-lg">
+                        <i class="fas fa-project-diagram text-3xl text-cyan-300 mb-3"></i>
+                        <h3 class="font-bold text-lg">Bridge Business and Tech</h3>
+                        <p class="text-sm text-gray-400 mt-1">Creating roles and teams that speak both languages is critical to ensuring digital solutions solve real-world problems.</p>
+                    </div>
+                </div>
+                <button onclick="restart()" class="mt-10 bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-gray-500 transition-colors transform hover:scale-105">
+                    <i class="fas fa-redo mr-2"></i> Restart Journey
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="progress-container">
+        <div class="road">
+            <div class="road-lines"></div>
+        </div>
+        <div id="progress-truck"><i class="fas fa-truck"></i></div>
+        <div class="progress-stop" style="left: 5%;"><i class="fas fa-warehouse"></i>Dispatch</div>
+        <div class="progress-stop" style="left: 15%;"><i class="fas fa-box-open"></i>Materials</div>
+        <div class="progress-stop" style="left: 25%;"><i class="fas fa-robot"></i>Assembly</div>
+        <div class="progress-stop" style="left: 35%;"><i class="fas fa-users-viewfinder"></i>Team</div>
+        <div class="progress-stop" style="left: 45%;"><i class="fas fa-clipboard-check"></i>QC</div>
+        <div class="progress-stop" style="left: 55%;"><i class="fas fa-route"></i>Logistics</div>
+        <div class="progress-stop" style="left: 65%;"><i class="fas fa-truck-loading"></i>Delivery</div>
+        <div class="progress-stop" style="left: 75%;"><i class="fas fa-tachometer-alt"></i>Maint.</div>
+        <div class="progress-stop" style="left: 85%;"><i class="fas fa-globe-americas"></i>Twin</div>
+    </div>
+    
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 hidden" onclick="closeAllModals()">
+        <div class="modal-content-wrapper" onclick="event.stopPropagation()"></div>
+    </div>
+
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 10;
+        const truck = document.getElementById('progress-truck');
+        let maintenanceInterval, twinInterval, oeeChart;
+        
+        const modalContent = {
+            'modal-1': { title: 'Accountability and Delivery Orientation', text: 'The move from “parties” to certifications demonstrated a value of responsibility: it wasn’t enough to attend events, participants had to deliver real business outcomes. The three-level certification system (Knower, Practitioner, Enabler) emphasized competence, contribution, and enabling others. This reflects Bosch’s culture of discipline, delivery, and measurable impact.' },
+            'modal-2': { title: 'Employee Empowerment', text: 'The core principle was that the transformation should be "initiated and fuelled by the creativity of our people." The DTE program was designed to upskill existing employees.' },
+            'modal-3': { title: 'Top-Down Support', text: 'Leadership showed buy-in by giving the BDO leader "full authority and trust" to execute the vision, signaling the importance of the initiative to the entire organization.' },
+            'modal-4': { title: 'Collaborative Innovation', text: 'Bosch actively worked to "break down the boundaries between technology and business" by creating cross-functional teams and roles like the Solution Advocate.' },
+            'modal-5': { title: 'Edith (Department Manager, BDO)', text: 'The Visionary Architect. She established the "culture first" strategy, recognizing that winning the hearts and minds of employees was the prerequisite for any technological change. Her leadership was the driving force behind the entire initiative.' },
+            'modal-6': { title: 'The Business Digitalization Organisation (BDO) Team', text: 'The Operational Engine. This team, led by Edith, designed and executed the innovative programs that brought the vision to life. They organized the engaging "digital parties" and over 20 training programs that built the company\'s digital capabilities from the ground up.' },
+            'modal-7': { title: 'Solution Advocates', text: 'The Critical Change Agents. Identified as the key role for turning ideas into reality, these individuals drove the actual delivery of digital products. They acted as catalysts within departments, bridging the gap between business needs and digital solutions.' },
+            'modal-8': { title: 'Frontline Employees', text: 'The Foundation of the Cultural Shift. The entire strategy was built to engage them, transforming them from passive observers into active, empowered participants who generated innovative ideas. Their widespread adoption (61% certified) was the ultimate measure of success.' },
+            'modal-9': { title: 'Mitigating Job Loss Fears', text: 'The mitigation was to focus on upskilling and empowerment through the DTE program, showing a clear investment in current employees rather than replacement.' },
+            'modal-10': { title: 'Mitigating Overload', text: 'The mitigation was to make it fun and engaging with "digitalization parties," creating a positive, collaborative atmosphere instead of a top-down mandate.' },
+            'modal-11': { title: 'Mitigating Skill Gaps', text: 'The mitigation was to provide structured training with clear roles (DTE) and a tiered certification system to create a clear development path for all employees.' },
+            'modal-12': { title: 'Mitigating Silos', text: 'The mitigation was to create cross-functional roles like "Solution Advocates" to act as official bridges and foster communication between departments.' },
+        };
+
+        const machines = [
+            { id: 1, name: 'CNC Machine #1', type: 'cogs' },
+            { id: 2, name: 'Robotic Arm #3', type: 'robot' },
+            { id: 3, name: 'Stamping Press #2', type: 'clone' },
+            { id: 4, name: 'Conveyor Belt #5', type: 'sliders-h' }
+        ];
+        let machineData = {};
+
+        function initializePrototypes() {
+            const machineGrid = document.getElementById('machine-grid');
+            if (!machineGrid) return;
+            machineGrid.innerHTML = '';
+            machines.forEach(m => {
+                machineGrid.innerHTML += `
+                    <div class="glass-panel p-3 rounded-md">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-gray-200"><i class="fas fa-${m.type} mr-2 text-cyan-300"></i>${m.name}</h4>
+                            <span id="status-m${m.id}" class="font-bold text-sm px-2 py-1 rounded-full"><span class="status-dot"></span><span class="status-text"></span></span>
+                        </div>
+                        <div class="text-xs mt-2 grid grid-cols-3 gap-2 text-gray-400">
+                            <p>Temp: <span id="temp-m${m.id}" class="font-mono text-gray-200">--°C</span></p>
+                            <p>Vibe: <span id="vib-m${m.id}" class="font-mono text-gray-200">--Hz</span></p>
+                            <p>Power: <span id="power-m${m.id}" class="font-mono text-gray-200">--kW</span></p>
+                        </div>
+                    </div>
+                `;
+                machineData[m.id] = { temp: 65, vib: 1.5, power: 50, status: 'Optimal' };
+            });
+        }
+
+        function updateSlide(newSlide) {
+            document.getElementById(`slide-${currentSlide}`).classList.remove('active');
+            document.getElementById(`slide-${newSlide}`).classList.add('active');
+            currentSlide = newSlide;
+            updateProgress();
+
+            clearInterval(maintenanceInterval);
+            maintenanceInterval = null;
+            clearInterval(twinInterval);
+            twinInterval = null;
+            if(oeeChart) {
+                oeeChart.destroy();
+                oeeChart = null;
+            }
+
+            if (currentSlide === 8) {
+                startMaintenanceSimulation();
+            } else if (currentSlide === 9) {
+                startTwinSimulation();
+            }
+        }
+
+        function nextSlide() { if (currentSlide < totalSlides) updateSlide(currentSlide + 1); }
+        function prevSlide() { if (currentSlide > 1) updateSlide(currentSlide - 1); }
+        function restart() { updateSlide(1); }
+
+        function updateProgress() {
+            const progressPercentage = 5 + ((currentSlide - 1) / (totalSlides - 1)) * 85;
+            truck.style.left = `${progressPercentage}%`;
+        }
+        
+        const modalContainer = document.getElementById('modal-container');
+        const modalWrapper = document.querySelector('.modal-content-wrapper');
+
+        function showModal(modalId) {
+            const content = modalContent[modalId];
+            if (!content) return;
+            modalWrapper.innerHTML = `<div class="interactive-card rounded-lg max-w-lg w-full p-8 text-center"><h3 class="text-2xl font-bold mb-4">${content.title}</h3><p class="text-gray-300">${content.text}</p></div>`;
+            modalContainer.classList.remove('hidden');
+        }
+
+        function closeAllModals() {
+            modalContainer.classList.add('hidden');
+        }
+        
+        function startMaintenanceSimulation() {
+            initializeOeeChart();
+            maintenanceInterval = setInterval(updateAllMachineData, 1500);
+            updateAllMachineData();
+        }
+
+        function updateAllMachineData() {
+            let warnings = 0;
+            let failures = 0;
+            machines.forEach(m => {
+                const data = machineData[m.id];
+                data.temp += (Math.random() - 0.45) * 5;
+                data.vib += (Math.random() - 0.45) * 0.5;
+                data.power += (Math.random() - 0.5) * 10;
+                
+                data.temp = Math.max(50, Math.min(90, data.temp));
+                data.vib = Math.max(0.5, Math.min(4.0, data.vib));
+                data.power = Math.max(40, Math.min(70, data.power));
+
+                document.getElementById(`temp-m${m.id}`).innerText = `${data.temp.toFixed(1)}°C`;
+                document.getElementById(`vib-m${m.id}`).innerText = `${data.vib.toFixed(2)}Hz`;
+                document.getElementById(`power-m${m.id}`).innerText = `${data.power.toFixed(0)}kW`;
+                
+                const currentStatus = updateMachineStatus(m.id, data);
+                if (currentStatus === 'Warning') warnings++;
+                if (currentStatus === 'Failure Predicted') failures++;
+            });
+            updateOeeChart(warnings, failures);
+        }
+
+        function updateMachineStatus(id, data) {
+            const statusEl = document.getElementById(`status-m${id}`);
+            const dot = statusEl.querySelector('.status-dot');
+            const text = statusEl.querySelector('.status-text');
+            statusEl.className = 'font-bold text-sm px-2 py-1 rounded-full';
+            
+            let newStatus = 'Optimal';
+            if (data.temp > 85 || data.vib > 3.5 || data.power > 65 || data.power < 45) {
+                newStatus = 'Failure Predicted';
+            } else if (data.temp > 75 || data.vib > 2.8 || data.power > 60) {
+                newStatus = 'Warning';
+            }
+
+            if (newStatus !== data.status) {
+                data.status = newStatus;
+                logMaintenanceEvent(machines.find(m=>m.id===id).name, newStatus);
+            }
+
+            if (data.status === 'Failure Predicted') {
+                statusEl.classList.add('bg-red-500/20', 'text-red-300');
+                dot.style.backgroundColor = '#ef4444'; dot.style.boxShadow = '0 0 8px #ef4444';
+                text.innerText = 'Failure';
+            } else if (data.status === 'Warning') {
+                statusEl.classList.add('bg-yellow-500/20', 'text-yellow-300');
+                dot.style.backgroundColor = '#f59e0b'; dot.style.boxShadow = '0 0 8px #f59e0b';
+                text.innerText = 'Warning';
+            } else {
+                statusEl.classList.add('bg-green-500/20', 'text-green-300');
+                dot.style.backgroundColor = '#22c55e'; dot.style.boxShadow = '0 0 8px #22c55e';
+                text.innerText = 'Optimal';
+            }
+            return newStatus;
+        }
+
+        function logMaintenanceEvent(machineName, status) {
+            const logEl = document.getElementById('maintenance-log');
+            const time = new Date().toLocaleTimeString();
+            let color = 'text-gray-400';
+            if (status === 'Warning') color = 'text-yellow-400';
+            if (status === 'Failure Predicted') color = 'text-red-400 font-bold';
+            logEl.innerHTML = `<p class="${color}">[${time}] ${machineName}: Status changed to ${status}.</p>` + logEl.innerHTML;
+        }
+        
+        function initializeOeeChart() {
+            const ctx = document.getElementById('oeeChart').getContext('2d');
+            oeeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Optimal', 'Warning', 'Failure'],
+                    datasets: [{
+                        data: [4, 0, 0],
+                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                        borderColor: '#0a192f',
+                        borderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+        
+        function updateOeeChart(warnings, failures) {
+            if (!oeeChart) return;
+            const optimal = machines.length - warnings - failures;
+            oeeChart.data.datasets[0].data = [optimal, warnings, failures];
+            oeeChart.update();
+        }
+
+        let truckPosition = 15;
+        let truckSpeed = 5;
+        let truckStatus = 'On Time';
+
+        function startTwinSimulation() {
+            twinInterval = setInterval(updateTruckPosition, 1000);
+            simulateDisruption('reset');
+        }
+
+        function updateTruckPosition() {
+            if (truckStatus !== 'Stopped') truckPosition += truckSpeed / 10;
+            if (truckPosition > 90) truckPosition = 15;
+            document.getElementById('shipment-truck').style.left = `${truckPosition}%`;
+            updateTwinLog();
+        }
+
+        function simulateDisruption(type) {
+            const truckEl = document.getElementById('shipment-truck');
+            const solutionPanel = document.getElementById('solution-panel');
+            truckEl.classList.remove('delayed');
+            truckEl.style.color = '#64ffda';
+            solutionPanel.innerHTML = '';
+
+            switch(type) {
+                case 'delay':
+                    truckSpeed = 2; truckStatus = 'Delayed (Supplier)'; truckEl.style.color = '#f59e0b';
+                    solutionPanel.innerHTML = `<p class="text-yellow-300 font-semibold">Action:</p><p class="text-sm text-gray-300">Notify production line of new ETA. Evaluate secondary supplier availability.</p>`;
+                    break;
+                case 'port':
+                    truckSpeed = 0; truckStatus = 'Stopped (Port Congestion)'; truckEl.style.color = '#ef4444'; truckEl.classList.add('delayed');
+                    solutionPanel.innerHTML = `<p class="text-red-300 font-semibold">Action:</p><p class="text-sm text-gray-300">Reroute to Port B. Authorize air freight for critical components.</p>`;
+                    break;
+                case 'weather':
+                    truckSpeed = 1; truckStatus = 'Delayed (Weather)'; truckEl.style.color = '#60a5fa';
+                    solutionPanel.innerHTML = `<p class="text-blue-300 font-semibold">Action:</p><p class="text-sm text-gray-300">Monitor weather patterns. Prepare for potential 24-48hr delay.</p>`;
+                    break;
+                case 'reset':
+                    truckSpeed = 5; truckStatus = 'On Time';
+                    solutionPanel.innerHTML = `<p class="text-green-400">All systems nominal. No action required.</p>`;
+                    break;
+            }
+            updateTwinLog();
+        }
+
+        function updateTwinLog() {
+            const logEl = document.getElementById('twin-log');
+            const time = new Date().toLocaleTimeString();
+            const eta = new Date(Date.now() + (90 - truckPosition) / (truckSpeed / 10) * 1000).toLocaleTimeString();
+            let color = 'text-green-400';
+            if (truckStatus.includes('Delayed')) color = 'text-yellow-400';
+            if (truckStatus.includes('Stopped')) color = 'text-red-400';
+
+            logEl.innerHTML = `
+                <p class="${color}">[${time}] Status: ${truckStatus}</p>
+                <p class="text-gray-400">Current Position: ${truckPosition.toFixed(1)}%</p>
+                <p class="text-gray-400">Estimated Arrival: ${truckStatus === 'Stopped' ? 'N/A' : eta}</p>
+            `;
+        }
+
+        initializePrototypes();
+        updateProgress();
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight') nextSlide();
+            else if (event.key === 'ArrowLeft') prevSlide();
+            else if (event.key === 'Escape') closeAllModals();
+        });
+    </script>
+</body>
+</html>
